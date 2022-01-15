@@ -2,7 +2,7 @@ using MetaBrainz.MusicBrainz;
 
 namespace MusicBrainz.Partial;
 
-public class Release : Entity, IRelease {
+public class Release : Entity, ISimpleRelease {
   public string Title { get; set; }
   
   public ICollection<ReleaseArtistCredit> ReleaseArtistCredits { get; set; }

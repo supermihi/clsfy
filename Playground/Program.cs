@@ -4,7 +4,7 @@ using MetaBrainz.MusicBrainz;
 using Microsoft.Extensions.Logging;
 using MusicBrainz.Partial;
 
-await using var dbContext = new MusicBrainzContext();
+await using var dbContext = new MusicBrainzContext("test.sqlite");
 await dbContext.Database.EnsureCreatedAsync();
 var logger = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug)).CreateLogger<Program>();
 var q = new Query("Clsfy", (string?)null, new Uri("mailto:michaelhelmling@posteo.de"));
