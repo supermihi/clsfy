@@ -1,6 +1,6 @@
+using Clsfy.MusicBrainz;
 using MetaBrainz.MusicBrainz;
 using MetaBrainz.MusicBrainz.Interfaces.Entities;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -8,12 +8,12 @@ namespace MusicBrainz.Partial;
 
 public class PartialMusicBrainzDatabase : IAsyncDisposable {
   public MusicBrainzContext Db { get; }
-  private readonly Query _musicBrainzClient;
+  private readonly Query _mb;
   private readonly ILogger _logger;
 
-  public PartialMusicBrainzDatabase(MusicBrainzContext dbContext, Query musicBrainzClient, ILogger? logger = null) {
+  public PartialMusicBrainzDatabase(MusicBrainzContext dbContext, Query mb, ILogger? logger = null) {
     Db = dbContext;
-    _musicBrainzClient = musicBrainzClient;
+    _mb = mb;
     _logger = logger ?? NullLogger.Instance;
   }
 
@@ -24,13 +24,15 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
       return release;
     }
     var mbRelease =
-        await _musicBrainzClient.LookupReleaseAsync(mbid,
-                                                    Include.Media | Include.Recordings | Include.DiscIds |
-                                                    Include.ArtistCredits | Include.Artists | Include.WorkRelationships
-                                                    | Include.ArtistRelationships
-                                                    | Include.RecordingRelationships | Include.WorkLevelRelationships
-                                                    | Include.ReleaseRelationships | Include.RecordingLevelRelationships);
-    _logger.LogInformation("Adding new release {Release} with {NumMedia} medial", mbRelease.Title, mbRelease.Media!.Count);
+        await _mb.LookupReleaseAsync(mbid,
+                                     Include.Media | Include.Recordings | Include.DiscIds |
+                                     Include.ArtistCredits | Include.Artists | Include.WorkRelationships
+                                     | Include.ArtistRelationships | Include.InstrumentRelationships
+                                     | Include.RecordingRelationships | Include.WorkLevelRelationships
+                                     | Include.ReleaseRelationships | Include.RecordingLevelRelationships
+                                     | Include.SeriesRelationships | Include.Aliases);
+    _logger.LogInformation("Adding new release {Release} with {NumMedia} medial", mbRelease.Title,
+                           mbRelease.Media!.Count);
     return await AddRelease(mbRelease);
   }
 
@@ -41,11 +43,12 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
       release.Media.Add(medium);
     }
     foreach (var mbArtistCredit in mbRelease.ArtistCredit!) {
-      var artist = await GetOrCreateArtist(mbArtistCredit.Artist!);
+      var artist = await GetOrCreateArtist(mbArtistCredit.Artist!.Id);
       release.Artists.Add(artist);
     }
     await Db.AddAsync(release);
     await Db.SaveChangesAsync();
+    _logger.LogInformation("Release {Release} added", mbRelease);
     return release;
   }
 
@@ -74,40 +77,77 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
       _logger.LogInformation("Recording with id {Id} already exists: {Title}", mbRecording.Id, recording.Title);
       return recording;
     }
-    recording = new Recording { Id = mbRecording.Id, Title = mbRecording.Title ?? throw new ArgumentException("missing recording title") };
-    var rels = mbRecording.Relationships!.Where(t => t.TargetType == EntityType.Work);
-    foreach (var workRelation in rels) {
-      if (workRelation.Type != "performance") {
-        _logger.LogWarning("ignoring unsupported recording→work relation {Type} on {Recording} with id {Id}", workRelation.Type, mbRecording.Title, mbRecording.Id);
-        continue;
+    recording = new Recording
+        { Id = mbRecording.Id, Title = mbRecording.Title ?? throw new ArgumentException("missing recording title") };
+    foreach (var relation in mbRecording.Relationships!) {
+      switch (relation.Type, relation.Direction) {
+        case ("performance", "forward"):
+          _logger.LogDebug("Found work {Work} performed on {Recording} with id {Id}", relation.Work!.Title,
+                           mbRecording.Title, mbRecording.Id);
+          var work = await GetOrCreateWork(relation.Work!.Id);
+          recording.Works.Add(work);
+          break;
+        case ("conductor", "backward"):
+          var conductor = await GetOrCreateArtist(relation.Artist!.Id);
+          recording.PerformerRelations.Add(new RecordingArtistRelation()
+                                       { Artist = conductor, Recording = recording, Type = PerformanceType.Conductor });
+          break;
+        case ("instrument", "backward"):
+          var instrumentalist = await GetOrCreateArtist(relation.Artist!.Id);
+          recording.PerformerRelations.Add(new RecordingArtistRelation() {
+              Artist = instrumentalist, Recording = recording, Type = PerformanceType.Instrument,
+              Instrument = relation.Attributes?.Any() ?? false ? Enum.Parse<Instrument>(relation.Attributes[0], true) : null
+          });
+          break;
+        case ("performing orchestra", "backward"):
+          var orchestra = await GetOrCreateArtist(relation.Artist!.Id);
+          recording.PerformerRelations.Add(new RecordingArtistRelation() {
+              Artist = orchestra, Recording = recording, Type = PerformanceType.Orchestra
+          });
+          break;
+        default:
+          _logger.LogWarning("ignoring unsupported recording relation {Relation} on {Recording}", relation,
+                             mbRecording);
+          break;
       }
-      _logger.LogInformation("Found work {Work} performed on {Recording} with id {Id}", workRelation.Work!.Title, mbRecording.Title, mbRecording.Id);
-      var work = await GetOrCreateWork(workRelation.Work!);
-      recording.Works.Add(work);
     }
     return recording;
   }
 
-  private async Task<Work> GetOrCreateWork(IWork mbWork) {
-    var existing = await Db.Works.FindAsync(mbWork.Id);
+  private async Task<Work> GetOrCreateWork(Guid id) {
+    var existing = await Db.Works.FindAsync(id);
     if (existing != null) {
       return existing;
     }
-    var work = new Work { Id = mbWork.Id, Title = mbWork.Title ?? throw new ArgumentException("missing work title") };
-    Db.Works.Add(work);
-    foreach (var relation in mbWork.Relationships ?? Enumerable.Empty<IRelationship>()) {
+    var mbWork = await _mb.LookupWorkAsync(id, Include.WorkRelationships | Include.ArtistRelationships | Include.Aliases);
+    var work = new Work { Id = mbWork.Id, Title = mbWork.GetPreferredAlias() ?? mbWork.Title ?? throw new ArgumentException("missing work title") };
+    await Db.AddAsync(work);
+    foreach (var relation in mbWork.Relationships!) {
       switch (relation.Type!, relation.Direction!) {
-        case ("parts", "forward"):
-          var part = await GetOrCreateWork((IWork)relation.Target!);
-          work.Parts.Add(part);
-          break;
         case ("parts", "backward"):
-          var containing = await GetOrCreateWork((IWork)relation.Target!);
+          var containing = await GetOrCreateWork(relation.Work!.Id);
           work.Containing.Add(containing);
           break;
-        case ("backward", "composer"):
-          var composer = await GetOrCreateArtist((IArtist)relation.Target!);
-          work.Composers.Add(composer);
+        case ("composer", "backward"):
+          var composer = await GetOrCreateArtist(relation.Artist!.Id);
+          work.Artists.Add(composer);
+          break;
+        // ignored relations
+        case ("lyricist", _):
+        // we're not interested in parts of the work, unless we have recordings of them –
+        // in which case they will be added with those
+        case ("parts", "forward"):
+        // no need to handle arrangement of this work
+        case ("arrangement", "forward"):
+        // works based on this one
+        case ("based on", "forward"):
+        // referred to in medley
+        case ("medley", "backward"):
+        case ("other version", _):
+        case ("dedication", _):
+          _logger.LogDebug("Ignoring work-{TargetType} relationship {Type} of work {WorkId}", relation.TargetType,
+                           relation.Type, mbWork.Id);
+          break;
         default:
           throw new ArgumentException($"work relation {relation} not implemented");
       }
@@ -115,18 +155,19 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
     return work;
   }
 
-  private async Task<Artist> GetOrCreateArtist(IArtist mbArtist) {
-    var artist = await Db.Artists.FindAsync(mbArtist.Id);
+  private async Task<Artist> GetOrCreateArtist(Guid id) {
+    var artist = await Db.Artists.FindAsync(id);
     if (artist != null) {
       return artist;
     }
-    var result = new Artist
-        { Id = mbArtist.Id, Name = mbArtist.Name ?? throw new ArgumentException("nameless artist") };
-    await Db.AddAsync(result);
-    return result;
+    var mbArtist = await _mb.LookupArtistAsync(id, Include.Aliases);
+    artist = new Artist { Id = mbArtist.Id, Name = mbArtist.GetPreferredAlias() ?? mbArtist.Name ?? throw new ArgumentException("unnamed artist") };
+    await Db.AddAsync(artist);
+    return artist;
   }
+
   public ValueTask DisposeAsync() {
-    _musicBrainzClient.Dispose();
+    _mb.Dispose();
     return ValueTask.CompletedTask;
   }
 }

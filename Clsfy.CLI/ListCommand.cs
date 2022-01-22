@@ -1,11 +1,16 @@
 using System.CommandLine;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MusicBrainz.Partial;
 
 namespace Clsfy.CLI;
 
 public class ListCommand : Command {
-  public ListCommand(GlobalOptions options) : base("list") {
+  private readonly IServiceProvider _services;
+
+  public ListCommand(GlobalOptions options, IServiceProvider services) : base("list") {
+    _services = services;
     var entityArgument = new Argument<EntityType>("entity", "the type of entity to list");
     AddArgument(entityArgument);
     this.SetHandler<string, string?, EntityType>(Handle, options.Database, options.Server, entityArgument);
@@ -15,7 +20,7 @@ public class ListCommand : Command {
       HandleAsync(database, server, entityType).GetAwaiter().GetResult();
 
   private async Task HandleAsync(string databasePath, string? server, EntityType entityType) {
-    var database = DatabaseFactory.Create(databasePath, server);
+    var database = DatabaseFactory.Create(databasePath, server, _services.GetService<ILoggerFactory>());
     switch (entityType) {
       case EntityType.Releases:
         await ListReleasesAsync(database);
@@ -23,8 +28,18 @@ public class ListCommand : Command {
       case EntityType.Artists:
         await ListArtistsAsync(database);
         break;
+      case EntityType.Works:
+        await ListWorksAsync(database);
+        break;
       default:
         throw new ArgumentOutOfRangeException(nameof(entityType), entityType, null);
+    }
+  }
+
+  private async Task ListWorksAsync(PartialMusicBrainzDatabase database) {
+    var topLevelWorks = database.Db.Works.Where(work => !work.Containing.Any());
+    await foreach (var work in topLevelWorks.Include(w => w.Artists).AsAsyncEnumerable()) {
+      Console.WriteLine($"{work.Title} by {string.Join(',', work.Artists.Select(a => a.Name))}");
     }
   }
 
@@ -45,18 +60,20 @@ public class ListCommand : Command {
   }
 
   private static async Task ListArtistsAsync(PartialMusicBrainzDatabase database) {
-    await foreach (var artist in database.Db.Artists.AsAsyncEnumerable()) {
-      Console.WriteLine(artist.Name);
+    var artists = database.Db.Artists.Select(a => new{ Artist = a, Recordings = a.Recordings.Count, Works = a.RelatedWorks.Count});
+    await foreach (var a in artists.AsAsyncEnumerable()) {
+      Console.WriteLine($"{a.Artist.Name} ({a.Recordings} recordings, {a.Works} works)");
     }
   }
 
   private enum EntityType {
     Releases,
-    Artists
+    Artists,
+    Works
   }
 
-  public static ListCommand Register(RootCommand rootCommand, GlobalOptions globalOptions) {
-    var listCommand = new ListCommand(globalOptions);
+  public static ListCommand Register(RootCommand rootCommand, GlobalOptions globalOptions, IServiceProvider services) {
+    var listCommand = new ListCommand(globalOptions, services);
     rootCommand.Add(listCommand);
     return listCommand;
   }

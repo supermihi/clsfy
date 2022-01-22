@@ -1,14 +1,16 @@
 using MetaBrainz.MusicBrainz;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MusicBrainz.Partial;
 
 public static class DatabaseFactory {
-  public static PartialMusicBrainzDatabase Create(string databaseFile, string? musicBrainzHost) {
+  public static PartialMusicBrainzDatabase Create(string databaseFile, string? musicBrainzHost,
+                                                  ILoggerFactory? loggerFactory) {
     var context = new MusicBrainzContext(databaseFile);
     context.Database.EnsureCreated();
 
-    var query = new Query("clsfy", "0.1.0", "michaelhelmlnig@posteo.de");
+    var query = new Query("clsfy", "0.1.0", "michaelhelmling@posteo.de");
     if (musicBrainzHost != null) {
       var uri = new Uri(musicBrainzHost);
       query.Server = uri.Host;
@@ -16,8 +18,8 @@ public static class DatabaseFactory {
       query.UrlScheme = uri.Scheme;
       Query.DelayBetweenRequests = 0;
     }
-    var logger = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug))
-                              .CreateLogger<PartialMusicBrainzDatabase>();
-    return new PartialMusicBrainzDatabase(context, query, logger);
+    return new PartialMusicBrainzDatabase(context, query,
+                                          loggerFactory?.CreateLogger<PartialMusicBrainzDatabase>() ??
+                                          NullLogger<PartialMusicBrainzDatabase>.Instance);
   }
 }

@@ -1,18 +1,22 @@
-﻿using System.CommandLine;
-using Clsfy.CLI;
+﻿using Clsfy.CLI;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-var dbOption = new Option<string>(
-                                  "--database",
-                                  getDefaultValue: () => "test.sqlite",
-                                  description: "the database file to use");
-var serverOption = new Option<string?>("--server", "the server to connect to");
-var rootCommand = new RootCommand();
-rootCommand.AddOption(dbOption);
-rootCommand.AddOption(serverOption);
-var globalOptions = new GlobalOptions(dbOption, serverOption);
-rootCommand.Description = "Clsfy Command-Line Interface";
+await CreateHostBuilder(args).RunConsoleAsync();
 
-ListCommand.Register(rootCommand, globalOptions);
-AddCommand.Register(rootCommand, globalOptions);
-return await rootCommand.InvokeAsync(args);
+static IHostBuilder CreateHostBuilder(string[] args) =>
+    Host.CreateDefaultBuilder(args)
+        .ConfigureAppConfiguration(builder => builder.AddCommandLine(args))
+        .ConfigureServices((_, services) =>
+        {
+          services.AddHostedService<ConsoleHostedService>();
+        })
+        .ConfigureLogging((_, logging) => 
+        {
+          logging.ClearProviders();
+          logging.AddSimpleConsole(options => options.IncludeScopes = true);
+          logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
+        });
 
