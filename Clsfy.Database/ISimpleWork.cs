@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial;
+namespace Clsfy.Database;
 
 public interface ISimpleWork {
   string Title { get; }

@@ -2,7 +2,7 @@ using System.CommandLine;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MusicBrainz.Partial;
+using Clsfy.Database;
 
 namespace Clsfy.CLI;
 

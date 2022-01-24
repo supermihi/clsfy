@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial; 
+namespace Clsfy.Database; 
 
 public class Medium {
   public int Id { get; set; }

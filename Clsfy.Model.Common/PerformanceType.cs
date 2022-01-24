@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial;
+namespace Clsfy.Model.Common;
 
 public enum PerformanceType {
   Conductor,

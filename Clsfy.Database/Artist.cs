@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial;
+namespace Clsfy.Database;
 
 public class Artist : Entity, ISimpleArtist {
   public string Name { get; init; } = null!;

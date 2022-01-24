@@ -1,6 +1,6 @@
 ﻿using MetaBrainz.MusicBrainz.Interfaces.Entities;
 
-namespace Clsfy.MusicBrainz;
+namespace Clsfy.MusicBrainz.Interface;
 
 public static class Extensions {
   private static readonly string[] Locales = new[] { "de", "en" };

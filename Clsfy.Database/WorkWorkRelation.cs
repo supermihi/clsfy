@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace MusicBrainz.Partial;
+namespace Clsfy.Database;
 
 public class WorkWorkRelation {
   public Guid ContainingId { get; set; }

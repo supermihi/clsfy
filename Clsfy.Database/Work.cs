@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial; 
+namespace Clsfy.Database; 
 
 public class Work : Entity, ISimpleWork {
   public string Title { get; set; } = null!;

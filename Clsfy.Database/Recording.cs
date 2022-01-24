@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial;
+namespace Clsfy.Database;
 
 public class Recording : Entity {
   public string Title { get; set; } = null!;

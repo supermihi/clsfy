@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace MusicBrainz.Partial;
+namespace Clsfy.Database;
 
 public class MusicBrainzContext : DbContext {
   private readonly string _path;

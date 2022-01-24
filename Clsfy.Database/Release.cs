@@ -1,6 +1,6 @@
 using MetaBrainz.MusicBrainz;
 
-namespace MusicBrainz.Partial;
+namespace Clsfy.Database;
 
 public class Release : Entity, ISimpleRelease {
   public string Title { get; set; } = null!;

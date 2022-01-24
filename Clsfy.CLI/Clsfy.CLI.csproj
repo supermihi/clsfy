@@ -6,11 +6,11 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-      <PackageReference Include="System.CommandLine" Version="2.0.0-beta2.21617.1" />
+      <PackageReference Include="System.CommandLine.Hosting" Version="0.4.0-alpha.21617.1" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\MusicBrainz.Partial\MusicBrainz.Partial.csproj" />
+      <ProjectReference Include="..\Clsfy.Database\Clsfy.Database.csproj" />
     </ItemGroup>
 
 

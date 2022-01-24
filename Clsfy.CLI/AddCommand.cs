@@ -1,14 +1,14 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MusicBrainz.Partial;
+using Clsfy.Database;
 
-namespace Clsfy.CLI; 
+namespace Clsfy.CLI;
 
 public class AddCommand  : Command {
   private readonly IServiceProvider _serviceProvider;
 
-  public AddCommand(GlobalOptions options, IServiceProvider serviceProvider) : base("add") {
+  public AddCommand(GlobalOptions options, ILoggerF) : base("add") {
     _serviceProvider = serviceProvider;
     var entityArgument = new Argument<EntityType>("entity", "the type of entity to add");
     var mbidArgument = new Argument<Guid>("mbid", "the musicbrainz id of the entity");
@@ -26,7 +26,7 @@ public class AddCommand  : Command {
 
   private async Task HandleAsync(string dbPath, string? server, EntityType? entityType, Guid mbid) {
     var database = DatabaseFactory.Create(dbPath, server, _serviceProvider.GetService<ILoggerFactory>());
-    await database.AddRelease(mbid);
+    await database.GetOrAddRelease(mbid);
   }
 
   public static AddCommand Register(RootCommand rootCommand, GlobalOptions options, IServiceProvider services) {

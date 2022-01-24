@@ -1,4 +1,6 @@
-namespace MusicBrainz.Partial;
+using Clsfy.Model.Common;
+
+namespace Clsfy.Database;
 
 public class RecordingArtistRelation {
   public Recording Recording { get; set; } = null!;

@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial; 
+namespace Clsfy.Database; 
 
 public class ReleaseArtistCredit {
   public Guid ReleaseId { get; set; }

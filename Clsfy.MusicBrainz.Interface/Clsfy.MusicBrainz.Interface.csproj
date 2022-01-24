@@ -10,4 +10,8 @@
       <PackageReference Include="MetaBrainz.MusicBrainz" Version="4.0.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Clsfy.Model.Common\Clsfy.Model.Common.csproj" />
+    </ItemGroup>
+
 </Project>

@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial;
+namespace Clsfy.Database;
 
 public class WorkArtistRelation {
   public Guid WorkId { get; set; }

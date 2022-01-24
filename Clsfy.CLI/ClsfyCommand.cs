@@ -1,14 +1,14 @@
 using System.CommandLine;
 using Microsoft.Extensions.Hosting;
 
-namespace Clsfy.CLI; 
+namespace Clsfy.CLI;
 
-public class ConsoleHostedService : IHostedService {
+public class ClsfyProgram  {
   private readonly IServiceProvider _services;
   private readonly IHostApplicationLifetime _appLifetime;
   private int _exitCode;
 
-  public ConsoleHostedService(IServiceProvider services, IHostApplicationLifetime appLifetime) {
+  public ClsfyProgram(IServiceProvider services, IHostApplicationLifetime appLifetime) {
     _services = services;
     _appLifetime = appLifetime;
   }

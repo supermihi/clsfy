@@ -1,10 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicBrainz.Partial", "MusicBrainz.Partial\MusicBrainz.Partial.csproj", "{6B2701E4-A1C1-4E73-9585-044DD4078CE9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clsfy.Database", "Clsfy.Database\Clsfy.Database.csproj", "{6B2701E4-A1C1-4E73-9585-044DD4078CE9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clsfy.CLI", "Clsfy.CLI\Clsfy.CLI.csproj", "{F6E9DBE2-8D49-4BCC-B3B8-D83B75E2BE45}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clsfy.MusicBrainz", "Clsfy.MusicBrainz\Clsfy.MusicBrainz.csproj", "{6F158171-BEE5-435F-B28A-97847AA25664}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clsfy.MusicBrainz.Interface", "Clsfy.MusicBrainz.Interface\Clsfy.MusicBrainz.Interface.csproj", "{6F158171-BEE5-435F-B28A-97847AA25664}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clsfy.MusicBrainz", "Clsfy.MusicBrainz\Clsfy.MusicBrainz.csproj", "{6021AFDA-2AE1-48C9-A82D-6F54DB5A1701}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clsfy.Model.Common", "Clsfy.Model.Common\Clsfy.Model.Common.csproj", "{CEB512FE-77FF-4812-911C-314759DBB6FB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,5 +28,13 @@ Global
 		{6F158171-BEE5-435F-B28A-97847AA25664}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F158171-BEE5-435F-B28A-97847AA25664}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6F158171-BEE5-435F-B28A-97847AA25664}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6021AFDA-2AE1-48C9-A82D-6F54DB5A1701}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6021AFDA-2AE1-48C9-A82D-6F54DB5A1701}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6021AFDA-2AE1-48C9-A82D-6F54DB5A1701}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6021AFDA-2AE1-48C9-A82D-6F54DB5A1701}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEB512FE-77FF-4812-911C-314759DBB6FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEB512FE-77FF-4812-911C-314759DBB6FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEB512FE-77FF-4812-911C-314759DBB6FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEB512FE-77FF-4812-911C-314759DBB6FB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,4 +1,4 @@
-namespace MusicBrainz.Partial;
+namespace Clsfy.Database;
 
 public class Track {
   public Guid Id { get; set; }
