@@ -13,10 +13,9 @@ public record RecordingRelation {
     Debug.Assert((performer == null) ^ (work == null));
   }
 
-  public record RecordingPerformer(PerformanceType Type, string? Instrument = null);
-
-  public static RecordingRelation Performance(Guid artist, PerformanceType type, string? instrument = null) =>
+  public static RecordingRelation Performance(Guid artist, PerformanceType type, Guid? instrument = null) =>
       new(new(artist, type, instrument), null);
 
+  public static RecordingRelation WorkRecording(Guid workId) => new(null, new(workId));
   public record RecordedWork(Guid WorkId);
 }

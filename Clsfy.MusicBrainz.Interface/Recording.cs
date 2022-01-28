@@ -8,4 +8,4 @@ public record Recording(
     IReadOnlyList<Guid> RecordedWorkIds,
     IReadOnlyList<Performer> Performers);
 
-public record Performer(Guid ArtistId, PerformanceType Type, string? Instrument);
+public record Performer(Guid ArtistId, PerformanceType Type, Guid? Instrument);

@@ -17,18 +17,14 @@ public class RecordingRelationFactory {
   public static readonly Guid Part = new("ca8d3642-ce5f-49f8-91f2-125d72524e6a");
   private readonly Dictionary<Guid, Func<IRelationship, RecordingRelation>> _factories;
 
-  static RecordingRelationFactory Default(Query query) {
-    var result = new RecordingRelationFactory(query);
-    result.Register(Orchestra, r => RecordingRelation.Performance(r.Artist!.Id, PerformanceType.Orchestra));
-    result.Register(Conductor, r => RecordingRelation.Performance(r.Artist!.Id, PerformanceType.Conductor));
-    result.Register(
-        Instrument, r => RecordingRelation.Performance(r.Artist!.Id, PerformanceType.Instrument, r.Attributes!.Single() /* TODO */));
-    return result;
-  }
 
-  public RecordingRelationFactory(Query query) {
-    _query = query;
+  public RecordingRelationFactory(IQueryWrapper query) {
+    _query = query.Query;
     _factories = new Dictionary<Guid, Func<IRelationship, RecordingRelation>>();
+    Register(Orchestra, r => RecordingRelation.Performance(r.Artist!.Id, PerformanceType.Orchestra));
+    Register(Conductor, r => RecordingRelation.Performance(r.Artist!.Id, PerformanceType.Conductor));
+    Register(Instrument, r => RecordingRelation.Performance(r.Artist!.Id, PerformanceType.Instrument, r.AttributeIds!.Values.Single() /* TODO */));
+    Register(Performance, r => RecordingRelation.WorkRecording(r.Work!.Id));
   }
 
   public void Register(Guid typeId, Func<IRelationship, RecordingRelation> factory) {

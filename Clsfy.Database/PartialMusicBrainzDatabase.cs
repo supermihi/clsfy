@@ -1,12 +1,11 @@
 using Clsfy.MusicBrainz.Interface;
-using MetaBrainz.MusicBrainz;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ClsfyMB = Clsfy.MusicBrainz.Interface;
 
 namespace Clsfy.Database;
 
-public class PartialMusicBrainzDatabase : IAsyncDisposable {
+public class PartialMusicBrainzDatabase {
   public MusicBrainzContext Db { get; }
   private readonly IClsfyMusicBrainzClient _client;
   private readonly ILogger _logger;
@@ -14,6 +13,7 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
   public PartialMusicBrainzDatabase(MusicBrainzContext dbContext, IClsfyMusicBrainzClient client,
       ILogger? logger = null) {
     Db = dbContext;
+    Db.Database.EnsureCreated();
     _client = client;
     _logger = logger ?? NullLogger.Instance;
   }
@@ -31,7 +31,7 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
     var mbRelease = await _client.GetReleaseAsync(id);
     _logger?.LogInformation("Adding new release {Release} with {NumMedia} medial", mbRelease.Title,
                             mbRelease.Media.Count);
-    var release = new Release { Id = mbRelease.Id, Title = mbRelease.Title ?? "", Date =  };
+    var release = new Release { Id = mbRelease.Id, Title = mbRelease.Title, Date = mbRelease.Date };
     foreach (var mbMedium in mbRelease.Media) {
       var medium = await CreateMedium(mbMedium);
       release.Media.Add(medium);
@@ -42,7 +42,7 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
     }
     await Db.AddAsync(release);
     await Db.SaveChangesAsync();
-    _logger.LogInformation("Release {Release} added", mbRelease);
+    _logger?.LogInformation("Release {Release} added", mbRelease);
     return release;
   }
 
@@ -82,15 +82,22 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
       var artist = await GetOrCreateArtist(performer.ArtistId);
       var relation = new RecordingArtistRelation() {
           ArtistId = artist.Id, RecordingId = recording.Id, Type = performer.Type,
-          Instrument = performer.Instrument != null ? await GetOrCreateInstrument(performer.Instrument) : null
+          Instrument = performer.Instrument != null ? await GetOrCreateInstrument(performer.Instrument!.Value) : null
       };
       recording.PerformerRelations.Add(relation);
     }
     return recording;
   }
 
-  private async Task<Instrument> GetOrCreateInstrument(string name) {
-    throw new NotImplementedException();
+  private async Task<Instrument> GetOrCreateInstrument(Guid id) {
+    var existing = await Db.Instruments.FindAsync(id);
+    if (existing != null) {
+      return existing;
+    }
+    var (guid, name) = await _client.GetInstrumentAsync(id);
+    var instrument = new Instrument { Id = guid, Name = name };
+    await Db.AddAsync(instrument);
+    return instrument;
   }
 
   private async Task<Work> GetOrCreateWork(Guid id) {
@@ -98,13 +105,18 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
     if (existing != null) {
       return existing;
     }
-    var mbWork = await _client.LookupWorkAsync(id, Include.WorkRelationships | Include.ArtistRelationships | Include.Aliases);
-    var work = new Work {
-        Id = mbWork.Id,
-        Title = mbWork.GetPreferredAlias() ?? mbWork.Title ?? throw new ArgumentException("missing work title")
-    };
+    var mbWork = await _client.GetWorkAsync(id);
+    var work = new Work { Id = mbWork.Id, Title = mbWork.Title };
+    foreach (var partOf in mbWork.PartOf) {
+      var superWork = await GetOrCreateWork(partOf);
+      work.ContainingRelations.Add(new WorkWorkRelation() { ContainingId = superWork.Id, PartId = work.Id});
+    }
+    foreach (var composerId in mbWork.Composers) {
+      var composer = await GetOrCreateArtist(composerId);
+      var rel = new WorkArtistRelation { Artist = composer, Work = work };
+      work.ArtistRelations.Add(rel);
+    }
     await Db.AddAsync(work);
-
     return work;
   }
 
@@ -113,17 +125,9 @@ public class PartialMusicBrainzDatabase : IAsyncDisposable {
     if (artist != null) {
       return artist;
     }
-    var mbArtist = await _mb.LookupArtistAsync(id, Include.Aliases);
-    artist = new Artist {
-        Id = mbArtist.Id,
-        Name = mbArtist.GetPreferredAlias() ?? mbArtist.Name ?? throw new ArgumentException("unnamed artist")
-    };
+    var (guid, name) = await _client.GetArtistAsync(id);
+    artist = new Artist { Id = guid, Name = name };
     await Db.AddAsync(artist);
     return artist;
-  }
-
-  public ValueTask DisposeAsync() {
-    _mb.Dispose();
-    return ValueTask.CompletedTask;
   }
 }

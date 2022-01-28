@@ -1,6 +1,6 @@
 namespace Clsfy.Database;
 
 public class Instrument {
-  private Guid Id { get; set; }
-  private string Name { get; set; } = null!;
+  public Guid Id { get; set; }
+  public string Name { get; set; } = null!;
 }

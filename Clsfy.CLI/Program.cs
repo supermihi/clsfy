@@ -1,48 +1,62 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Hosting;
+using System.CommandLine.Invocation;
 using System.CommandLine.NamingConventionBinder;
 using System.CommandLine.Parsing;
-using Clsfy.CLI;
 using Clsfy.Database;
-using MetaBrainz.MusicBrainz;
-using Microsoft.Extensions.Configuration;
+using Clsfy.MusicBrainz;
+using Clsfy.MusicBrainz.Interface;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+namespace Clsfy.CLI;
+
 class Program {
   static async Task Main(string[] args) {
     await BuildCommandLine()
-          .UseHost(_ => Host.CreateDefaultBuilder(),
-                   host => { host.ConfigureServices(services => { services.AddSingleton<Program>(); }); })
+          .UseHost(
+            _ => Host.CreateDefaultBuilder(),
+            host => {
+              host.ConfigureServices(
+                    services => services
+                                .AddSingleton<Program>()
+                                .AddTransient<PartialMusicBrainzDatabase>()
+                                .AddDbContext<MusicBrainzContext>(o => { o.UseSqlite("Data Source='test.sqlite'"); })
+                                .AddTransient<IQueryWrapper, QueryWrapper>()
+                                .AddTransient<IClsfyMusicBrainzClient, ClsfyMusicBrainzClient>()
+                                .AddSingleton<RecordingRelationFactory>()
+                  )
+                  .ConfigureLogging(
+                    (_, logging) => logging
+                                    .ClearProviders()
+                                    .AddSimpleConsole(options => options.IncludeScopes = true)
+                                    .AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning)
+                                    .AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning)
+                  );
+            })
           .UseDefaults()
           .Build()
           .InvokeAsync(args);
   }
 
   private static CommandLineBuilder BuildCommandLine() {
-    var root = new RootCommand(@"$ dotnet run --name 'Joe'") {
-        new Option<string>("--name") {
-            IsRequired = true
-        }
+    var root = new RootCommand {
+      new Option<string>("--server", () => "http://localhost:5000", "the musicbrainz server to connect to")
     };
-    root.Handler = CommandHandler.Create<Options, IHost>(Run);
+    //root.Handler = CommandHandler.Create<Options, IHost>(Run);
+    root.AddCommand(new AddCommand());
+    root.AddCommand(new ListCommand());
     return new CommandLineBuilder(root);
   }
 
   private static void Run(Options options, IHost host) {
-    var serviceProvider = host.Services;
-    var greeter = serviceProvider.GetRequiredService<IGreeter>();
-    var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-    var logger = loggerFactory.CreateLogger(typeof(Program));
 
-    var name = options.Name;
-    logger.LogInformation(GreetEvent, "Greeting was requested for: {name}", name);
-    greeter.Greet(name);
   }
 }
-
+/*
 Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(builder => builder.AddCommandLine(args))
     .ConfigureServices((_, services) =>
@@ -66,3 +80,4 @@ Host.CreateDefaultBuilder(args)
       logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
     });
 
+*/

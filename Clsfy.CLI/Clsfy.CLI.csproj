@@ -11,6 +11,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Clsfy.Database\Clsfy.Database.csproj" />
+      <ProjectReference Include="..\Clsfy.MusicBrainz\Clsfy.MusicBrainz.csproj" />
     </ItemGroup>
 
 

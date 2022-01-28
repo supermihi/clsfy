@@ -1,5 +1,3 @@
-namespace Clsfy.CLI; 
+namespace Clsfy.CLI;
 
-public class Options {
-  
-}
+public record Options(string Server);

@@ -3,29 +3,34 @@ using Microsoft.EntityFrameworkCore;
 namespace Clsfy.Database;
 
 public class MusicBrainzContext : DbContext {
-  private readonly string _path;
-
-  public MusicBrainzContext(string path) {
-    _path = path;
-  }
+  public MusicBrainzContext(DbContextOptions<MusicBrainzContext> options) : base(options) { }
 
   public DbSet<Artist> Artists => Set<Artist>();
   public DbSet<Release> Releases => Set<Release>();
   public DbSet<Medium> Media => Set<Medium>();
   public DbSet<Track> Tracks => Set<Track>();
   public DbSet<Work> Works => Set<Work>();
+  public DbSet<Instrument> Instruments => Set<Instrument>();
   public DbSet<Recording> Recordings => Set<Recording>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder) {
     modelBuilder.Entity<Release>()
                 .HasMany(r => r.Artists)
                 .WithMany(a => a.Releases)
-                .UsingEntity<ReleaseArtistCredit>(j => j.HasOne(rac => rac.Artist).WithMany(a => a.ReleaseArtistCredits)
-                                                        .HasForeignKey(rac => rac.ArtistId),
-                                                  j => j.HasOne(rac => rac.Release).WithMany(r => r.ReleaseArtistCredits)
-                                                        .HasForeignKey(rac => rac.ReleaseId),
-                                                  j => j.HasKey(rac => new { rac.ArtistId, rac.ReleaseId }));
+                .UsingEntity<ReleaseArtistCredit>(
+                  j => j.HasOne(rac => rac.Artist).WithMany(a => a.ReleaseArtistCredits)
+                        .HasForeignKey(rac => rac.ArtistId),
+                  j => j.HasOne(rac => rac.Release).WithMany(r => r.ReleaseArtistCredits)
+                        .HasForeignKey(rac => rac.ReleaseId),
+                  j => j.HasKey(rac => new { rac.ArtistId, rac.ReleaseId }));
 
+    modelBuilder.Entity<Work>()
+                .HasMany(w => w.Artists)
+                .WithMany(a => a.RelatedWorks)
+                .UsingEntity<WorkArtistRelation>(
+                  j => j.HasOne(war => war.Artist).WithMany(a => a.WorkRelations).HasForeignKey(war => war.ArtistId),
+                  j => j.HasOne(war => war.Work).WithMany(w => w.ArtistRelations).HasForeignKey(war => war.WorkId),
+                  j => j.HasKey(war => new { war.ArtistId, war.WorkId }));
     modelBuilder.Entity<WorkWorkRelation>()
                 .HasKey(r => new { r.ContainingId, r.PartId });
     modelBuilder.Entity<WorkWorkRelation>()
@@ -36,17 +41,6 @@ public class MusicBrainzContext : DbContext {
                 .HasOne(r => r.Part)
                 .WithMany(p => p.ContainingRelations)
                 .HasForeignKey(r => r.PartId);
-
-    modelBuilder.Entity<WorkArtistRelation>()
-                .HasKey(r => new { r.ArtistId, r.WorkId });
-    modelBuilder.Entity<WorkArtistRelation>()
-                .HasOne(r => r.Artist)
-                .WithMany(a => a.WorkRelations)
-                .HasForeignKey(r => r.ArtistId);
-    modelBuilder.Entity<WorkArtistRelation>()
-                .HasOne(r => r.Work)
-                .WithMany(w => w.ArtistRelations)
-                .HasForeignKey(r => r.WorkId);
 
     modelBuilder.Entity<Artist>()
                 .HasMany(artist => artist.Recordings)
@@ -62,9 +56,5 @@ public class MusicBrainzContext : DbContext {
                 .HasOne(r => r.Artist)
                 .WithMany(a => a.RecordingRelations)
                 .HasForeignKey(r => r.ArtistId);*/
-  }
-
-  protected override void OnConfiguring(DbContextOptionsBuilder options) {
-    options.UseSqlite($"Data Source={_path}");
   }
 }
